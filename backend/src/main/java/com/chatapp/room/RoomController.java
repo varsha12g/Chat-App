@@ -3,6 +3,7 @@ package com.chatapp.room;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import com.chatapp.user.User;
@@ -13,6 +14,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,7 +45,8 @@ public class RoomController {
 
     @PostMapping("/join")
     public RoomResponse joinRoom(@AuthenticationPrincipal User user, @Valid @RequestBody JoinRoomRequest request) {
-        String roomId = normalizeRoomId(request.roomId());
+        String requestedRoomId = Objects.requireNonNull(request.roomId());
+        String roomId = normalizeRoomId(requestedRoomId);
         Room room = roomRepository.findById(roomId).orElseGet(() -> {
             Room nextRoom = new Room();
             nextRoom.setId(roomId);
@@ -80,7 +83,8 @@ public class RoomController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A room needs at least two members");
         }
 
-        for (String memberId : members) {
+        for (String member : members) {
+            String memberId = Objects.requireNonNull(member);
             if (!userRepository.existsById(memberId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown member id: " + memberId);
             }
@@ -107,7 +111,7 @@ public class RoomController {
         return RoomResponse.from(roomRepository.save(room));
     }
 
-    private String normalizeRoomId(String roomId) {
+    private @NonNull String normalizeRoomId(@NonNull String roomId) {
         String normalized = roomId.trim().toLowerCase().replaceAll("\\s+", "-");
         if (!normalized.matches("[a-z0-9][a-z0-9-_]{2,39}")) {
             throw new ResponseStatusException(
@@ -119,7 +123,7 @@ public class RoomController {
     }
 
     public record JoinRoomRequest(
-            @NotBlank @Size(min = 3, max = 40) String roomId
+            @NonNull @NotBlank @Size(min = 3, max = 40) String roomId
     ) {
     }
 

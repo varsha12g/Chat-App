@@ -2,6 +2,7 @@ package com.chatapp.message;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Objects;
 
 import com.chatapp.room.Room;
 import com.chatapp.room.RoomRepository;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -41,7 +43,7 @@ public class MessageController {
 
     @MessageMapping("/sendMessage/{roomId}")
     public void sendMessage(
-            @DestinationVariable String roomId,
+            @NonNull @DestinationVariable String roomId,
             @Valid @Payload SendMessageRequest request,
             Principal principal
     ) {
@@ -68,10 +70,10 @@ public class MessageController {
     public record SendMessageRequest(@NotBlank @Size(max = 2000) String content) {
     }
 
-    public record StompUser(String id, String name) implements Principal {
+    public record StompUser(@NonNull String id, @NonNull String name) implements Principal {
         @Override
-        public String getName() {
-            return name;
+        public @NonNull String getName() {
+            return Objects.requireNonNull(name);
         }
     }
 
@@ -87,7 +89,7 @@ public class MessageController {
         }
 
         @GetMapping("/{roomId}")
-        public List<ChatMessage> messages(@PathVariable String roomId, @AuthenticationPrincipal User user) {
+        public List<ChatMessage> messages(@NonNull @PathVariable String roomId, @AuthenticationPrincipal User user) {
             Room room = roomRepository.findById(roomId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
             if (!room.getMemberIds().contains(user.getId())) {

@@ -2,6 +2,7 @@ package com.chatapp.config;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import com.chatapp.message.MessageController.StompUser;
 import com.chatapp.security.JwtService;
@@ -18,6 +19,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.lang.NonNull;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -50,13 +52,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
+    public void configureMessageBroker(@NonNull MessageBrokerRegistry registry) {
         registry.enableSimpleBroker("/topic");
         registry.setApplicationDestinationPrefixes("/app");
     }
 
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
+    @SuppressWarnings("null")
+    public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
         registry.addEndpoint("/chat")
                 .setAllowedOrigins(allowedOrigins)
                 .setAllowedOriginPatterns(allowedOriginPatterns)
@@ -64,10 +67,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
-    public void configureClientInboundChannel(ChannelRegistration registration) {
+    public void configureClientInboundChannel(@NonNull ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
             @Override
-            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+            public @NonNull Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
                 if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
                     List<String> authHeaders = accessor.getNativeHeader("Authorization");
@@ -81,7 +84,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     if (!jwtService.isTokenValid(token, user)) {
                         throw new IllegalArgumentException("Invalid websocket token");
                     }
-                    accessor.setUser(new StompUser(user.getId(), user.getUsername()));
+                    String userId = Objects.requireNonNull(user.getId());
+                    String usernameForSession = Objects.requireNonNull(user.getUsername());
+                    accessor.setUser(new StompUser(userId, usernameForSession));
                 }
                 return message;
             }
